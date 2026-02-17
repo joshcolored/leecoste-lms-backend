@@ -17,7 +17,7 @@ app.use(
   cors({
     origin: [
       "http://localhost:5173", // local
-      "https://your-frontend.onrender.com", // CHANGE THIS
+      "https://leecoste.vercel.app", // CHANGE THIS
     ],
     credentials: true,
   })
@@ -224,3 +224,4 @@ const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
   console.log(`🚀 Server running on port ${PORT}`);
 });
+
