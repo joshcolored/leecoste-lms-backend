@@ -1,0 +1,6 @@
+server.js
+node_modules
+firebase.js
+middleware/auth.js
+serviceAccountKey.json
+.env
