@@ -10,6 +10,7 @@ const auth = require("./middleware/auth");
 
 const db = admin.firestore();
 const app = express();
+
 /* 🔥 REQUIRED FOR RENDER SECURE COOKIES */
 app.set("trust proxy", 1);
 
@@ -18,8 +19,8 @@ app.set("trust proxy", 1);
 app.use(
   cors({
     origin: [
-      "http://localhost:5173", // local
-      "https://leecoste.vercel.app", // CHANGE THIS
+      "http://localhost:5173",
+      "https://leecoste.vercel.app",
     ],
     credentials: true,
   })
@@ -103,8 +104,8 @@ app.post("/api/login", async (req, res) => {
 
     res.cookie("refreshToken", refreshToken, {
       httpOnly: true,
-      secure: true,        // REQUIRED on Render (HTTPS)
-      sameSite: "none",    // REQUIRED for cross-site frontend
+      secure: true,
+      sameSite: "none",
       maxAge: 7 * 24 * 60 * 60 * 1000,
     });
 
@@ -119,7 +120,6 @@ app.post("/api/login", async (req, res) => {
 // REFRESH
 app.post("/api/refresh", (req, res) => {
   const token = req.cookies.refreshToken;
-
   if (!token) return res.sendStatus(401);
 
   jwt.verify(token, process.env.JWT_SECRET, (err, user) => {
@@ -144,54 +144,25 @@ app.post("/api/logout", (req, res) => {
   res.json({ msg: "Logged out" });
 });
 
-/* ================= STATS ================= */
+/* ================= USER STATS (SUMMARY + CHART) ================= */
 
-app.get("/api/stats", async (req, res) => {
+app.get("/api/user-stats", async (req, res) => {
   try {
+    const { range = "7d", from, to, type } = req.query;
+
+    let users = [];
     let total = 0;
     let verified = 0;
     let nextPageToken;
 
+    // 🔥 Load all Firebase Auth users once
     do {
       const result = await admin.auth().listUsers(1000, nextPageToken);
 
       result.users.forEach((user) => {
         total++;
         if (user.emailVerified) verified++;
-      });
 
-      nextPageToken = result.pageToken;
-
-    } while (nextPageToken);
-
-    res.json({
-      totalUsers: total,
-      verifiedUsers: verified,
-      unverifiedUsers: total - verified,
-      systemStatus: "Active",
-      security: "Protected",
-    });
-
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ msg: "Failed to fetch stats" });
-  }
-});
-
-/* ================= USER STATS (CHART) ================= */
-
-app.get("/api/user-stats", async (req, res) => {
-  try {
-    const { range, from, to, type } = req.query;
-
-    let users = [];
-    let nextPageToken;
-
-    // Load users from Firebase Auth
-    do {
-      const result = await admin.auth().listUsers(1000, nextPageToken);
-
-      result.users.forEach((user) => {
         users.push({
           createdAt: new Date(user.metadata.creationTime),
           emailVerified: user.emailVerified,
@@ -201,9 +172,10 @@ app.get("/api/user-stats", async (req, res) => {
       nextPageToken = result.pageToken;
     } while (nextPageToken);
 
+    /* ===== FILTER USERS ===== */
+
     let filteredUsers = [...users];
 
-    // Date range filter
     if (from && to) {
       const fromDate = new Date(from);
       const toDate = new Date(to);
@@ -214,7 +186,6 @@ app.get("/api/user-stats", async (req, res) => {
       );
     }
 
-    // Type filter
     if (type === "verified") {
       filteredUsers = filteredUsers.filter((u) => u.emailVerified);
     }
@@ -299,14 +270,24 @@ app.get("/api/user-stats", async (req, res) => {
       }
     }
 
-    res.json(data);
+    /* ===== RESPONSE ===== */
+
+    res.json({
+      summary: {
+        totalUsers: total,
+        verifiedUsers: verified,
+        unverifiedUsers: total - verified,
+        systemStatus: "Active",
+        security: "Protected",
+      },
+      chart: data,
+    });
 
   } catch (err) {
     console.error("User stats error:", err);
     res.status(500).json({ msg: "Failed to load stats" });
   }
 });
-
 
 /* ================= DASHBOARD ================= */
 
@@ -356,4 +337,3 @@ const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
   console.log(`🚀 Server running on port ${PORT}`);
 });
-
