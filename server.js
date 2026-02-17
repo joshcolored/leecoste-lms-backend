@@ -180,7 +180,7 @@ app.get("/api/stats", async (req, res) => {
 
 /* ================= USER STATS (CHART) ================= */
 
-app.get("/api/user-stats", auth, async (req, res) => {
+app.get("/api/user-stats", async (req, res) => {
   try {
     const { range, from, to, type } = req.query;
 
@@ -356,3 +356,4 @@ const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
   console.log(`🚀 Server running on port ${PORT}`);
 });
+
